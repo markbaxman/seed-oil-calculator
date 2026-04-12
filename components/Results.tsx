@@ -10,88 +10,55 @@ interface ResultsProps {
   inputs: UserInputs
 }
 
-const OMEGA3_URL = process.env.NEXT_PUBLIC_AMAZON_OMEGA3_URL ?? '#'
-const OLIVE_URL = process.env.NEXT_PUBLIC_AMAZON_OLIVE_OIL_URL ?? '#'
-const WALNUTS_URL = process.env.NEXT_PUBLIC_AMAZON_WALNUTS_URL ?? '#'
+// UK Amazon affiliate links — set real ASINs via env vars
+const OMEGA3_URL =
+  process.env.NEXT_PUBLIC_AMAZON_OMEGA3_URL ??
+  'https://www.amazon.co.uk/s?k=omega+3+fish+oil+1000mg&tag=seedoilcalculator-20'
+const OLIVE_URL =
+  process.env.NEXT_PUBLIC_AMAZON_OLIVE_OIL_URL ??
+  'https://www.amazon.co.uk/s?k=extra+virgin+olive+oil&tag=seedoilcalculator-20'
+const AVOCADO_URL =
+  process.env.NEXT_PUBLIC_AMAZON_AVOCADO_OIL_URL ??
+  'https://www.amazon.co.uk/s?k=avocado+oil+cooking&tag=seedoilcalculator-20'
 
-const TIER_COLORS: Record<CalculationResult['tier'], string> = {
-  OPTIMAL: '#16a34a',
-  MODERATE: '#ca8a04',
-  HIGH: '#ea580c',
-  'VERY HIGH': '#dc2626',
-}
-
-const TIER_BG: Record<CalculationResult['tier'], string> = {
-  OPTIMAL: '#f0fdf4',
-  MODERATE: '#fefce8',
-  HIGH: '#fff7ed',
-  'VERY HIGH': '#fef2f2',
+const TIER_CONFIG: Record<
+  CalculationResult['tier'],
+  { color: string; bg: string; border: string; label: string; emoji: string }
+> = {
+  OPTIMAL:    { color: '#16a34a', bg: '#f0fdf4', border: '#86efac', label: 'Low',       emoji: '✅' },
+  MODERATE:   { color: '#ca8a04', bg: '#fefce8', border: '#fde047', label: 'Moderate',  emoji: '⚠️' },
+  HIGH:       { color: '#ea580c', bg: '#fff7ed', border: '#fdba74', label: 'High',       emoji: '🔴' },
+  'VERY HIGH':{ color: '#dc2626', bg: '#fef2f2', border: '#fca5a5', label: 'Very High', emoji: '🚨' },
 }
 
 function useCountUp(target: number, durationMs: number) {
   const [count, setCount] = useState(0)
-  const startedRef = useRef(false)
-
+  const started = useRef(false)
   useEffect(() => {
-    if (startedRef.current) return
-    startedRef.current = true
-
-    const startTime = performance.now()
-
-    function step(now: number) {
-      const elapsed = now - startTime
-      const progress = Math.min(elapsed / durationMs, 1)
-      // ease-out cubic
-      const eased = 1 - Math.pow(1 - progress, 3)
+    if (started.current) return
+    started.current = true
+    const t0 = performance.now()
+    function tick(now: number) {
+      const p = Math.min((now - t0) / durationMs, 1)
+      const eased = 1 - Math.pow(1 - p, 3)
       setCount(Math.round(eased * target))
-      if (progress < 1) {
-        requestAnimationFrame(step)
-      }
+      if (p < 1) requestAnimationFrame(tick)
     }
-
-    requestAnimationFrame(step)
+    requestAnimationFrame(tick)
   }, [target, durationMs])
-
   return count
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        backgroundColor: '#fff7ed',
-        borderRadius: '10px',
-        padding: '16px',
-        textAlign: 'center',
-      }}
-    >
-      <div
-        style={{
-          fontSize: '24px',
-          fontWeight: 700,
-          color: '#ea580c',
-          marginBottom: '4px',
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: '13px', color: '#78716c', lineHeight: 1.3 }}>
-        {label}
-      </div>
-    </div>
-  )
 }
 
 function AffiliateCard({
   href,
   emoji,
   title,
-  description,
+  benefit,
 }: {
   href: string
   emoji: string
   title: string
-  description: string
+  benefit: string
 }) {
   return (
     <a
@@ -108,80 +75,139 @@ function AffiliateCard({
         backgroundColor: '#ffffff',
         textDecoration: 'none',
         color: 'inherit',
-        transition: 'border-color 0.15s',
       }}
     >
-      <span style={{ fontSize: '24px', lineHeight: 1 }}>{emoji}</span>
-      <div>
+      <span style={{ fontSize: '22px', lineHeight: 1, flexShrink: 0 }}>{emoji}</span>
+      <div style={{ flex: 1 }}>
         <div style={{ fontWeight: 600, fontSize: '14px', color: '#1c1917', marginBottom: '2px' }}>
           {title}
         </div>
-        <div style={{ fontSize: '13px', color: '#78716c', lineHeight: 1.4 }}>
-          {description}
+        <div style={{ fontSize: '13px', color: '#78716c', lineHeight: 1.4, marginBottom: '6px' }}>
+          {benefit}
         </div>
-        <div
+        <span
           style={{
-            display: 'inline-block',
-            marginTop: '6px',
             fontSize: '12px',
-            fontWeight: 600,
+            fontWeight: 700,
             color: '#ea580c',
+            letterSpacing: '0.02em',
           }}
         >
           View on Amazon →
-        </div>
+        </span>
       </div>
     </a>
   )
 }
 
-export default function Results({ result, onReset, inputs }: ResultsProps) {
-  const tierColor = TIER_COLORS[result.tier]
-  const tierBg = TIER_BG[result.tier]
-  const displayedRatio = useCountUp(Math.round(Math.min(result.ratio, 50)), 1500)
+// Visual ratio bar — shows where the user sits on a scale from 4:1 to 30:1
+function RatioBar({ ratio }: { ratio: number }) {
+  const MIN = 4
+  const MAX = 30
+  const clamped = Math.min(Math.max(ratio, MIN), MAX)
+  const pct = ((clamped - MIN) / (MAX - MIN)) * 100
+  const idealPct = 0 // 4:1 is at the very left
 
+  const [animated, setAnimated] = useState(0)
+  useEffect(() => {
+    const t = setTimeout(() => setAnimated(pct), 100)
+    return () => clearTimeout(t)
+  }, [pct])
+
+  return (
+    <div style={{ marginBottom: '6px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#a8a29e', marginBottom: '6px' }}>
+        <span style={{ color: '#16a34a', fontWeight: 600 }}>Optimal 4:1</span>
+        <span>Western avg 16:1</span>
+        <span style={{ color: '#dc2626' }}>30:1+</span>
+      </div>
+      <div
+        style={{
+          position: 'relative',
+          height: '12px',
+          borderRadius: '999px',
+          overflow: 'visible',
+          background: 'linear-gradient(to right, #86efac 0%, #fde047 30%, #fdba74 60%, #fca5a5 100%)',
+        }}
+      >
+        {/* Ideal marker */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `${idealPct}%`,
+            top: '-4px',
+            width: '3px',
+            height: '20px',
+            backgroundColor: '#16a34a',
+            borderRadius: '2px',
+          }}
+        />
+        {/* User marker */}
+        <div
+          style={{
+            position: 'absolute',
+            left: `${animated}%`,
+            top: '-6px',
+            transform: 'translateX(-50%)',
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            backgroundColor: '#1c1917',
+            border: '3px solid #ffffff',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+            transition: 'left 1.2s cubic-bezier(0.22, 1, 0.36, 1)',
+            zIndex: 10,
+          }}
+        />
+      </div>
+      <div
+        style={{
+          marginTop: '10px',
+          textAlign: 'center',
+          fontSize: '13px',
+          color: '#57534e',
+        }}
+      >
+        Your ratio: <strong style={{ color: '#1c1917' }}>{Math.round(Math.min(ratio, 50))}:1</strong>
+        &nbsp;&nbsp;·&nbsp;&nbsp;
+        Target: <strong style={{ color: '#16a34a' }}>4:1</strong>
+      </div>
+    </div>
+  )
+}
+
+export default function Results({ result, onReset, inputs }: ResultsProps) {
+  const cfg = TIER_CONFIG[result.tier]
+  const displayedRatio = useCountUp(Math.round(Math.min(result.ratio, 50)), 1400)
   const [visible, setVisible] = useState(false)
+
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 50)
     return () => clearTimeout(t)
   }, [])
 
-  const showAffiliates =
-    result.tier === 'HIGH' ||
-    result.tier === 'VERY HIGH' ||
-    inputs.omega3Supplement === 'none' ||
-    inputs.oilyFish === 'rarely_never'
-
   const omega3Needed = parseFloat(result.omega3Needed)
   const capsules = Math.round(omega3Needed / 1)
   const salmonServings = Math.round(omega3Needed / 0.6)
 
-  const tierContextLines: Record<CalculationResult['tier'], string> = {
-    OPTIMAL:
-      'Your omega-6 to omega-3 balance is within the healthy range. Keep it up by maintaining your current diet and continuing to prioritise omega-3-rich foods.',
-    MODERATE:
-      'Your ratio is above the ideal 4:1 target but not yet in the danger zone. Small, consistent changes to your diet can bring this into the optimal range relatively quickly.',
-    HIGH: `Your ratio is approximately ${Math.round(result.ratio / 4)}× higher than the healthy target of 4:1. At this level, chronic low-grade inflammation may be a concern.`,
-    'VERY HIGH': `Your ratio is approximately ${Math.round(result.ratio / 4)}× higher than the healthy target of 4:1. This level of imbalance is associated with significant inflammatory risk and warrants meaningful dietary changes.`,
-  }
+  // Which affiliate products to show
+  const showOmega3 =
+    inputs.omega3Supp === 'no' || result.tier === 'HIGH' || result.tier === 'VERY HIGH'
+  const showOliveOil =
+    inputs.cookingFat === 'seed_oils' || inputs.cookingFat === 'mixed'
+  const showAvocado =
+    (result.tier === 'HIGH' || result.tier === 'VERY HIGH') && !showOliveOil
+  const showAffiliates = showOmega3 || showOliveOil || showAvocado
 
-  const tierHealthText: Record<CalculationResult['tier'], { p1: string; p2: string }> = {
-    OPTIMAL: {
-      p1: 'A ratio at or below 4:1 is associated with significantly reduced risk of chronic inflammatory conditions, including cardiovascular disease, metabolic syndrome, and certain cancers. Ancient hunter-gatherer diets maintained a ratio close to 1:1, and modern longevity research consistently links lower ratios with better health outcomes.',
-      p2: 'Your diet appears well-balanced in terms of fatty acid ratios. To maintain this, continue prioritising omega-3-rich foods like oily fish, minimise ultra-processed food consumption, and be mindful of cooking oil choices when eating out.',
-    },
-    MODERATE: {
-      p1: 'A ratio in the 4–10:1 range is common in health-conscious Western diets and represents a meaningful improvement over the average, but still leaves room for optimisation. Research suggests that bringing the ratio below 4:1 has measurable benefits for inflammatory markers and long-term cardiovascular health.',
-      p2: 'The most impactful changes at this level are typically increasing omega-3 intake — through oily fish or supplementation — rather than making dramatic cuts to omega-6. Even adding one or two additional servings of salmon per week can shift the balance noticeably.',
-    },
-    HIGH: {
-      p1: 'Research by Simopoulos (2002) identified that Western diets with omega-6:omega-3 ratios of 15–17:1 are associated with increased risk of cardiovascular disease, inflammatory conditions, and certain cancers. A ratio in the 10–20:1 range puts you within this high-risk territory.',
-      p2: 'At this level, both reducing omega-6 sources and boosting omega-3 intake matter. Switching cooking oils, reducing processed food, and adding oily fish or a quality omega-3 supplement are the three highest-impact interventions you can make. These changes are cumulative — even partial improvements help.',
-    },
-    'VERY HIGH': {
-      p1: 'A ratio above 20:1 is associated with the highest levels of systemic inflammation in dietary research. Simopoulos (2002) and subsequent meta-analyses identify this range as a significant independent risk factor for cardiovascular disease, depression, and accelerated cellular ageing.',
-      p2: 'The good news is that the ratio is highly modifiable through diet. People who switch from seed oils to olive oil and add omega-3-rich foods or supplements can see meaningful ratio improvements within weeks. The actions listed below are prioritised specifically for your dietary pattern — start with the first one.',
-    },
+  const subTexts: Record<CalculationResult['tier'], string> = {
+    OPTIMAL:
+      'Your omega-6 intake appears well-balanced. Your diet is in the range that nutrition research considers healthy.',
+    MODERATE:
+      'Your diet has some seed oil and processed food exposure. Small, targeted changes can bring your balance into the optimal range.',
+    HIGH:
+      'Your diet is likely high in seed oils and processed foods. This level of imbalance is associated with chronic low-grade inflammation.',
+    'VERY HIGH':
+      'Your diet appears heavily reliant on seed oils and processed food. This is the most common pattern in Western diets — and the most modifiable.',
   }
 
   return (
@@ -190,102 +216,161 @@ export default function Results({ result, onReset, inputs }: ResultsProps) {
         maxWidth: '680px',
         margin: '0 auto',
         opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(12px)',
+        transform: visible ? 'translateY(0)' : 'translateY(14px)',
         transition: 'opacity 0.4s ease, transform 0.4s ease',
       }}
     >
-      {/* SECTION 1 — Tier Badge */}
+      {/* ── SECTION 1: Emotional headline ── */}
       <div
         style={{
-          backgroundColor: tierBg,
-          border: `2px solid ${tierColor}`,
-          borderRadius: '12px',
-          padding: '20px 24px',
+          backgroundColor: cfg.bg,
+          border: `2px solid ${cfg.border}`,
+          borderRadius: '14px',
+          padding: '24px',
           textAlign: 'center',
-          marginBottom: '28px',
+          marginBottom: '24px',
         }}
       >
+        <div style={{ fontSize: '28px', marginBottom: '8px' }}>{cfg.emoji}</div>
         <div
           style={{
-            display: 'inline-block',
-            backgroundColor: tierColor,
-            color: '#ffffff',
-            fontWeight: 700,
             fontSize: '13px',
-            letterSpacing: '0.08em',
-            padding: '4px 12px',
-            borderRadius: '999px',
-            marginBottom: '10px',
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            color: cfg.color,
+            textTransform: 'uppercase',
+            marginBottom: '6px',
           }}
         >
-          {result.tier} RISK
+          Inflammation Risk
         </div>
-        <div style={{ fontSize: '15px', color: '#57534e', fontWeight: 500 }}>
-          {tierContextLines[result.tier]}
+        <div
+          style={{
+            fontSize: 'clamp(2rem, 8vw, 3rem)',
+            fontWeight: 800,
+            color: cfg.color,
+            lineHeight: 1,
+            marginBottom: '12px',
+          }}
+        >
+          {cfg.label}
         </div>
+        <p style={{ fontSize: '15px', color: '#57534e', lineHeight: 1.6, margin: 0 }}>
+          {subTexts[result.tier]}
+        </p>
       </div>
 
-      {/* SECTION 2 — Count-up ratio */}
+      {/* ── SECTION 2: Ratio count-up + visual bar ── */}
       <div
         style={{
-          textAlign: 'center',
-          marginBottom: '28px',
-          padding: '28px 24px',
+          padding: '24px',
           backgroundColor: '#fff7ed',
           borderRadius: '12px',
+          marginBottom: '20px',
         }}
       >
-        <p style={{ fontSize: '15px', color: '#78716c', marginBottom: '8px' }}>
-          Your estimated omega-6:omega-3 ratio is
+        <p style={{ fontSize: '14px', color: '#78716c', marginBottom: '4px', textAlign: 'center' }}>
+          Estimated omega balance
         </p>
         <div
           style={{
-            fontSize: '64px',
+            fontSize: 'clamp(3rem, 14vw, 4.5rem)',
             fontWeight: 800,
             color: '#ea580c',
             lineHeight: 1,
+            textAlign: 'center',
             fontVariantNumeric: 'tabular-nums',
+            marginBottom: '4px',
           }}
         >
           {displayedRatio}:1
         </div>
-        <p style={{ fontSize: '14px', color: '#a8a29e', marginTop: '10px' }}>
-          The healthy target is 4:1 or below
+        <p style={{ fontSize: '13px', color: '#a8a29e', textAlign: 'center', marginBottom: '20px' }}>
+          Healthy target is 4:1 or lower
         </p>
-        {result.vsWesternAverage !== 0 && (
-          <p style={{ fontSize: '14px', color: '#78716c', marginTop: '6px' }}>
-            {result.vsWesternAverage > 0
-              ? `${result.vsWesternAverage}% above the Western average (16:1)`
-              : `${Math.abs(result.vsWesternAverage)}% below the Western average (16:1)`}
-          </p>
-        )}
+        <RatioBar ratio={result.ratio} />
       </div>
 
-      {/* SECTION 4 — Two stat cards */}
+      {/* ── SECTION 3: Impact stat ── */}
+      {result.xOverTarget > 1 && (
+        <div
+          style={{
+            padding: '16px 20px',
+            borderRadius: '10px',
+            backgroundColor: '#1c1917',
+            color: '#ffffff',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+          }}
+        >
+          <div style={{ fontSize: '28px', flexShrink: 0 }}>⚡</div>
+          <p style={{ fontSize: '14px', lineHeight: 1.5, margin: 0 }}>
+            You may be consuming approximately{' '}
+            <strong style={{ color: '#fb923c' }}>{result.xOverTarget}× more</strong>{' '}
+            inflammatory omega-6 fats than your body can balance — relative to the 4:1 healthy target.
+          </p>
+        </div>
+      )}
+
+      {/* ── SECTION 4: Stats grid ── */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
-          gap: '12px',
+          gap: '10px',
+          marginBottom: '20px',
+        }}
+      >
+        {[
+          { label: 'Daily omega-6', value: `${result.totalOmega6PerDay.toFixed(1)}g` },
+          { label: 'Daily omega-3', value: `${result.totalOmega3PerDay.toFixed(2)}g` },
+          { label: 'Your ratio', value: result.ratioDisplay },
+          { label: 'Healthy target', value: '4:1' },
+        ].map(({ label, value }) => (
+          <div
+            key={label}
+            style={{
+              backgroundColor: '#fff7ed',
+              borderRadius: '10px',
+              padding: '14px 16px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '22px', fontWeight: 700, color: '#ea580c', marginBottom: '3px' }}>
+              {value}
+            </div>
+            <div style={{ fontSize: '12px', color: '#78716c', lineHeight: 1.3 }}>{label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── SECTION 5: Teaspoons + omega-3 needed ── */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
           marginBottom: '24px',
         }}
       >
         <div
           style={{
-            backgroundColor: '#fff7ed',
+            backgroundColor: '#fafaf9',
+            border: '1px solid #e7e5e4',
             borderRadius: '10px',
-            padding: '16px',
-            gridColumn: '1 / -1',
+            padding: '14px 16px',
           }}
         >
-          <div style={{ fontSize: '14px', color: '#78716c', marginBottom: '6px' }}>
+          <div style={{ fontSize: '13px', color: '#78716c', marginBottom: '4px' }}>
             Daily omega-6 equivalent
           </div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#ea580c' }}>
+          <div style={{ fontSize: '17px', fontWeight: 700, color: '#ea580c' }}>
             {result.teaspoonsEquivalent} teaspoons of vegetable oil
           </div>
-          <div style={{ fontSize: '13px', color: '#a8a29e', marginTop: '4px' }}>
-            This is your estimated daily omega-6 intake expressed as cooking oil
+          <div style={{ fontSize: '12px', color: '#a8a29e', marginTop: '3px' }}>
+            That is your estimated daily omega-6 intake expressed as cooking oil volume
           </div>
         </div>
 
@@ -293,92 +378,41 @@ export default function Results({ result, onReset, inputs }: ResultsProps) {
           <div
             style={{
               backgroundColor: '#f0fdf4',
+              border: '1px solid #86efac',
               borderRadius: '10px',
-              padding: '16px',
-              gridColumn: '1 / -1',
+              padding: '14px 16px',
             }}
           >
-            <div style={{ fontSize: '14px', color: '#78716c', marginBottom: '6px' }}>
-              Extra omega-3 needed to reach 4:1
+            <div style={{ fontSize: '13px', color: '#78716c', marginBottom: '4px' }}>
+              Extra omega-3 needed daily to reach 4:1
             </div>
-            <div style={{ fontSize: '18px', fontWeight: 700, color: '#16a34a' }}>
+            <div style={{ fontSize: '17px', fontWeight: 700, color: '#16a34a' }}>
               +{result.omega3Needed}g per day
             </div>
-            <div style={{ fontSize: '13px', color: '#a8a29e', marginTop: '4px' }}>
-              Approx. {capsules} omega-3 capsule{capsules !== 1 ? 's' : ''}, or{' '}
+            <div style={{ fontSize: '12px', color: '#a8a29e', marginTop: '3px' }}>
+              ≈ {capsules} omega-3 capsule{capsules !== 1 ? 's' : ''}, or{' '}
               {salmonServings} serving{salmonServings !== 1 ? 's' : ''} of salmon per week
             </div>
           </div>
         )}
       </div>
 
-      {/* SECTION 5 — 2×2 stat grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '10px',
-          marginBottom: '28px',
-        }}
-      >
-        <StatCard
-          label="Daily omega-6"
-          value={`${result.totalOmega6PerDay.toFixed(1)}g`}
-        />
-        <StatCard
-          label="Daily omega-3"
-          value={`${result.totalOmega3PerDay.toFixed(2)}g`}
-        />
-        <StatCard
-          label="Your ratio"
-          value={result.ratioDisplay}
-        />
-        <StatCard
-          label="Healthy target"
-          value="4:1"
-        />
-      </div>
-
-      {/* SECTION 6 — Health explanation */}
-      <div
-        style={{
-          backgroundColor: '#f5f5f4',
-          borderRadius: '12px',
-          padding: '20px 24px',
-          marginBottom: '28px',
-        }}
-      >
-        <h3
-          style={{
-            fontSize: '17px',
-            fontWeight: 700,
-            color: '#1c1917',
-            marginBottom: '12px',
-          }}
-        >
-          What Does This Mean for Your Health?
-        </h3>
-        <p style={{ fontSize: '14px', color: '#57534e', lineHeight: 1.7, marginBottom: '12px' }}>
-          {tierHealthText[result.tier].p1}
-        </p>
-        <p style={{ fontSize: '14px', color: '#57534e', lineHeight: 1.7 }}>
-          {tierHealthText[result.tier].p2}
-        </p>
-      </div>
-
-      {/* SECTION 7 — Top 3 personal actions */}
+      {/* ── SECTION 6: Top 3 personalised actions ── */}
       {result.topReductions.length > 0 && (
-        <div style={{ marginBottom: '28px' }}>
+        <div style={{ marginBottom: '24px' }}>
           <h3
             style={{
-              fontSize: '17px',
+              fontSize: '18px',
               fontWeight: 700,
               color: '#1c1917',
-              marginBottom: '14px',
+              marginBottom: '4px',
             }}
           >
-            Your Top {result.topReductions.length} Personal Actions
+            Your Personalised Fix Plan
           </h3>
+          <p style={{ fontSize: '13px', color: '#78716c', marginBottom: '14px' }}>
+            Top {result.topReductions.length} actions ranked by impact on your specific results
+          </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {result.topReductions.map((action, i) => (
               <div
@@ -411,23 +445,18 @@ export default function Results({ result, onReset, inputs }: ResultsProps) {
                   {i + 1}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#1c1917', marginBottom: '5px' }}>
                     {action.action}
                   </div>
                   {action.estimatedSaving > 0 ? (
                     <div style={{ fontSize: '13px', color: '#78716c' }}>
-                      Could reduce your ratio by ~{action.estimatedSaving.toFixed(1)}g omega-6/day
-                      {' '}— bringing your ratio to approximately{' '}
-                      <span style={{ fontWeight: 600, color: '#ea580c' }}>
-                        {action.newRatioIfChanged}:1
-                      </span>
+                      Saves ~{action.estimatedSaving.toFixed(1)}g omega-6/day — estimated new ratio:{' '}
+                      <strong style={{ color: '#ea580c' }}>{action.newRatioIfChanged}:1</strong>
                     </div>
                   ) : (
                     <div style={{ fontSize: '13px', color: '#78716c' }}>
-                      Would bring your ratio to approximately{' '}
-                      <span style={{ fontWeight: 600, color: '#16a34a' }}>
-                        {action.newRatioIfChanged}:1
-                      </span>
+                      Estimated new ratio:{' '}
+                      <strong style={{ color: '#16a34a' }}>{action.newRatioIfChanged}:1</strong>
                     </div>
                   )}
                 </div>
@@ -437,104 +466,81 @@ export default function Results({ result, onReset, inputs }: ResultsProps) {
         </div>
       )}
 
-      {/* SECTION 8 — Affiliate recommendations */}
+      {/* ── SECTION 7: Amazon affiliate products ── */}
       {showAffiliates && (
         <div
           style={{
-            marginBottom: '28px',
-            padding: '20px 24px',
+            marginBottom: '24px',
+            padding: '20px',
             borderRadius: '12px',
             border: '1px solid #e7e5e4',
             backgroundColor: '#fafaf9',
           }}
         >
-          <h3
-            style={{
-              fontSize: '17px',
-              fontWeight: 700,
-              color: '#1c1917',
-              marginBottom: '4px',
-            }}
-          >
+          <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1c1917', marginBottom: '4px' }}>
             Recommended Products
           </h3>
           <p style={{ fontSize: '13px', color: '#a8a29e', marginBottom: '14px' }}>
-            Based on your results, these are the highest-impact dietary additions.
+            Based on your results — highest-impact additions for your diet.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {(inputs.omega3Supplement === 'none' || result.tier === 'HIGH' || result.tier === 'VERY HIGH') && (
+            {showOmega3 && (
               <AffiliateCard
                 href={OMEGA3_URL}
                 emoji="🐟"
                 title="High-Strength Omega-3 Fish Oil (1000mg+ EPA/DHA)"
-                description="The most direct way to improve your ratio. Look for triglyceride-form omega-3 for best absorption."
+                benefit="The most direct way to improve your ratio. Triglyceride-form omega-3 is best absorbed."
               />
             )}
-            {(result.tier === 'HIGH' || result.tier === 'VERY HIGH') && (
+            {showOliveOil && (
               <AffiliateCard
                 href={OLIVE_URL}
                 emoji="🫒"
                 title="Extra Virgin Olive Oil"
-                description="Replacing vegetable oil with EVOO is the single biggest dietary switch you can make for your omega ratio."
+                benefit="Replacing seed oils with EVOO is the single biggest dietary switch for your omega ratio — saves ~8g omega-6 per tablespoon."
               />
             )}
-            {(inputs.oilyFish === 'rarely_never' || result.tier === 'VERY HIGH') && (
+            {showAvocado && (
               <AffiliateCard
-                href={WALNUTS_URL}
-                emoji="🌰"
-                title="Raw Walnuts (ALA omega-3 source)"
-                description="A convenient plant-based omega-3 source. ALA converts to EPA/DHA at low rates but still contributes to your omega-3 total."
+                href={AVOCADO_URL}
+                emoji="🥑"
+                title="Avocado Oil (High Heat Cooking)"
+                benefit="Ideal for high-heat cooking. Low in omega-6, high smoke point — a direct swap for vegetable oil."
               />
             )}
           </div>
-          <p
-            style={{
-              fontSize: '12px',
-              color: '#a8a29e',
-              marginTop: '12px',
-              lineHeight: 1.5,
-            }}
-          >
-            Affiliate disclosure: Links above may be affiliate links. If you purchase through
-            them, we may earn a small commission at no extra cost to you. This helps support
-            the free calculator.
+          <p style={{ fontSize: '11px', color: '#a8a29e', marginTop: '12px', lineHeight: 1.5 }}>
+            As an Amazon Associate we earn from qualifying purchases. Affiliate links do not affect
+            which products are recommended — only your results determine what appears here.
           </p>
         </div>
       )}
 
-      {/* SECTION 9 — Share */}
+      {/* ── SECTION 8: Share ── */}
       <div
         style={{
-          marginBottom: '28px',
-          padding: '20px 24px',
+          marginBottom: '24px',
+          padding: '20px',
           borderRadius: '12px',
           border: '1px solid #e7e5e4',
           backgroundColor: '#ffffff',
         }}
       >
-        <h3
-          style={{
-            fontSize: '16px',
-            fontWeight: 700,
-            color: '#1c1917',
-            marginBottom: '4px',
-          }}
-        >
+        <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1c1917', marginBottom: '4px' }}>
           Share Your Result
         </h3>
         <p style={{ fontSize: '13px', color: '#78716c', marginBottom: '14px' }}>
-          Help others find out about their omega ratio.
+          Most people have no idea their diet is this far out of balance.
         </p>
         <ShareButton
-          ratioDisplay={result.ratioDisplay}
           tier={result.tier}
-          multiplier={result.tier === 'HIGH' || result.tier === 'VERY HIGH'
-            ? Math.round(result.ratio / 4)
-            : undefined}
+          tierLabel={cfg.label}
+          ratioDisplay={result.ratioDisplay}
+          xOverTarget={result.xOverTarget}
         />
       </div>
 
-      {/* SECTION 10 — Recalculate */}
+      {/* ── SECTION 9: Recalculate ── */}
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
         <button
           type="button"
@@ -548,14 +554,13 @@ export default function Results({ result, onReset, inputs }: ResultsProps) {
             fontWeight: 600,
             fontSize: '15px',
             cursor: 'pointer',
-            transition: 'border-color 0.15s',
           }}
         >
           Recalculate with Different Answers
         </button>
       </div>
 
-      {/* DISCLAIMER */}
+      {/* ── DISCLAIMER ── */}
       <div
         style={{
           padding: '16px',
@@ -565,13 +570,11 @@ export default function Results({ result, onReset, inputs }: ResultsProps) {
         }}
       >
         <p style={{ fontSize: '12px', color: '#a8a29e', lineHeight: 1.6, margin: 0 }}>
-          <strong style={{ color: '#78716c' }}>Disclaimer:</strong> This calculator provides
-          an estimated omega-6:omega-3 ratio based on population-level dietary data (USDA
-          FoodData Central) and self-reported intake. It is intended for educational purposes
-          only and does not constitute medical advice. Individual metabolism, food preparation
-          methods, and portion sizes vary significantly. Consult a registered dietitian or
-          healthcare provider before making significant dietary changes, especially if you
-          have a diagnosed health condition.
+          <strong style={{ color: '#78716c' }}>Disclaimer:</strong> This tool provides estimates
+          based on general dietary patterns and population-level food composition data (USDA
+          FoodData Central). Results are for educational purposes only and do not constitute
+          medical advice. Individual results vary based on portion sizes, brands, and metabolism.
+          Consult a healthcare professional before making significant dietary changes.
         </p>
       </div>
     </div>

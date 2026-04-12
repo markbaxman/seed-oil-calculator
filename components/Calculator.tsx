@@ -7,16 +7,13 @@ import { trackEvent } from './Analytics'
 import ProgressBar from './ProgressBar'
 import Step1 from './Step1'
 import Step2 from './Step2'
-import Step3 from './Step3'
 import Results from './Results'
 
-type Step = 1 | 2 | 3 | 'results'
-
-const DEFAULT_INPUTS: Partial<UserInputs> = {}
+type Step = 1 | 2 | 'results'
 
 export default function Calculator() {
   const [step, setStep] = useState<Step>(1)
-  const [inputs, setInputs] = useState<Partial<UserInputs>>(DEFAULT_INPUTS)
+  const [inputs, setInputs] = useState<Partial<UserInputs>>({})
   const [result, setResult] = useState<ReturnType<typeof calculateRisk> | null>(null)
   const topRef = useRef<HTMLDivElement>(null)
 
@@ -31,12 +28,6 @@ export default function Calculator() {
   const goToStep2 = () => {
     setStep(2)
     trackEvent('calculator_step2')
-    scrollToTop()
-  }
-
-  const goToStep3 = () => {
-    setStep(3)
-    trackEvent('calculator_step3')
     scrollToTop()
   }
 
@@ -60,6 +51,7 @@ export default function Calculator() {
     if (step === 1 && Object.keys(inputs).length === 0) {
       trackEvent('calculator_started')
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
 
   return (
@@ -70,10 +62,7 @@ export default function Calculator() {
       style={{ backgroundColor: '#ffffff', borderColor: '#e7e5e4' }}
     >
       {step !== 'results' && (
-        <ProgressBar
-          currentStep={step as number}
-          totalSteps={3}
-        />
+        <ProgressBar currentStep={step as number} totalSteps={2} />
       )}
 
       <div className="slide-in" key={step}>
@@ -88,15 +77,7 @@ export default function Calculator() {
           <Step2
             inputs={inputs}
             onChange={handleChange}
-            onNext={goToStep3}
             onBack={() => { setStep(1); scrollToTop() }}
-          />
-        )}
-        {step === 3 && (
-          <Step3
-            inputs={inputs}
-            onChange={handleChange}
-            onBack={() => { setStep(2); scrollToTop() }}
             onSubmit={handleSubmit}
           />
         )}

@@ -7,7 +7,7 @@ interface ProgressBarProps {
 export default function ProgressBar({
   currentStep,
   totalSteps,
-  labels = ['Cooking Oils & Fats', 'Packaged & Processed Food', 'Omega-3 Sources & You'],
+  labels = ['Your Daily Habits', 'Protective Factors'],
 }: ProgressBarProps) {
   const pct = ((currentStep - 1) / (totalSteps - 1)) * 100
 

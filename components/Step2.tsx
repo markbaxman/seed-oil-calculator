@@ -5,17 +5,21 @@ import type { UserInputs } from '@/lib/types'
 interface Step2Props {
   inputs: Partial<UserInputs>
   onChange: (key: keyof UserInputs, value: string) => void
-  onNext: () => void
   onBack: () => void
+  onSubmit: () => void
 }
 
-interface RadioCardProps {
+function RadioCard({
+  selected,
+  onClick,
+  label,
+  hint,
+}: {
   selected: boolean
   onClick: () => void
-  children: React.ReactNode
-}
-
-function RadioCard({ selected, onClick, children }: RadioCardProps) {
+  label: string
+  hint?: string
+}) {
   return (
     <button
       type="button"
@@ -24,11 +28,10 @@ function RadioCard({ selected, onClick, children }: RadioCardProps) {
         display: 'block',
         width: '100%',
         textAlign: 'left',
-        padding: '12px 16px',
+        padding: '13px 16px',
         borderRadius: '8px',
         border: `2px solid ${selected ? '#ea580c' : '#e7e5e4'}`,
         backgroundColor: selected ? '#fff7ed' : '#ffffff',
-        fontWeight: selected ? 500 : 400,
         color: '#1c1917',
         cursor: 'pointer',
         fontSize: '15px',
@@ -37,16 +40,21 @@ function RadioCard({ selected, onClick, children }: RadioCardProps) {
         marginBottom: '8px',
       }}
     >
-      {children}
+      <span style={{ fontWeight: selected ? 600 : 400 }}>{label}</span>
+      {hint && (
+        <span style={{ display: 'block', fontSize: '12px', color: '#78716c', marginTop: '2px', fontWeight: 400 }}>
+          {hint}
+        </span>
+      )}
     </button>
   )
 }
 
-export default function Step2({ inputs, onChange, onNext, onBack }: Step2Props) {
+export default function Step2({ inputs, onChange, onBack, onSubmit }: Step2Props) {
   const allAnswered =
-    inputs.snacks !== undefined &&
-    inputs.takeaway !== undefined &&
-    inputs.processedMeat !== undefined
+    inputs.oilyFish !== undefined &&
+    inputs.omega3Supp !== undefined &&
+    inputs.nutsSeeds !== undefined
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
@@ -59,99 +67,80 @@ export default function Step2({ inputs, onChange, onNext, onBack }: Step2Props) 
           marginTop: '8px',
         }}
       >
-        Packaged &amp; Processed Food
+        Your Protective Factors
       </h2>
       <p style={{ color: '#78716c', fontSize: '14px', marginBottom: '28px' }}>
-        Ultra-processed foods are a major hidden source of omega-6 seed oils.
+        These foods help balance your omega-6 intake with anti-inflammatory omega-3.
       </p>
 
-      {/* Q4 */}
+      {/* Q4 — Oily fish */}
       <div style={{ marginBottom: '28px' }}>
-        <p
-          style={{
-            fontWeight: 600,
-            fontSize: '16px',
-            color: '#1c1917',
-            marginBottom: '12px',
-          }}
-        >
-          4. How often do you eat crisps, biscuits, crackers or packaged snacks?
+        <p style={{ fontWeight: 600, fontSize: '16px', color: '#1c1917', marginBottom: '12px' }}>
+          4. How often do you eat oily fish?
+        </p>
+        <p style={{ fontSize: '13px', color: '#a8a29e', marginBottom: '10px' }}>
+          Salmon, mackerel, sardines, herring, trout
         </p>
         {(
           [
-            ['daily', 'Daily or almost daily'],
-            ['few_per_week', 'A few times per week'],
-            ['occasionally', 'Occasionally (once a week or less)'],
-            ['rarely_never', 'Rarely or never'],
-          ] as [UserInputs['snacks'], string][]
+            ['never', 'Never or very rarely'],
+            ['1_week', 'About once a week'],
+            ['2_to_3_week', '2–3 times a week'],
+            ['4_plus', '4 or more times a week'],
+          ] as [UserInputs['oilyFish'], string][]
         ).map(([value, label]) => (
           <RadioCard
             key={value}
-            selected={inputs.snacks === value}
-            onClick={() => onChange('snacks', value)}
-          >
-            {label}
-          </RadioCard>
+            selected={inputs.oilyFish === value}
+            onClick={() => onChange('oilyFish', value)}
+            label={label}
+          />
         ))}
       </div>
 
-      {/* Q5 */}
+      {/* Q5 — Omega-3 supplement */}
       <div style={{ marginBottom: '28px' }}>
-        <p
-          style={{
-            fontWeight: 600,
-            fontSize: '16px',
-            color: '#1c1917',
-            marginBottom: '12px',
-          }}
-        >
-          5. How often do you eat takeaway, fast food or restaurant meals?
+        <p style={{ fontWeight: 600, fontSize: '16px', color: '#1c1917', marginBottom: '12px' }}>
+          5. Do you take omega-3 supplements?
         </p>
         {(
           [
-            ['5_plus_week', '5+ times per week'],
-            ['2_to_4_week', '2–4 times per week'],
-            ['once_week_less', 'Once a week or less'],
-            ['very_rarely', 'Very rarely'],
-          ] as [UserInputs['takeaway'], string][]
-        ).map(([value, label]) => (
+            ['no', 'No', 'I don\'t take fish oil or omega-3 capsules'],
+            ['occasionally', 'Occasionally or low dose', 'Sometimes, or less than 500mg EPA/DHA'],
+            ['daily', 'Yes, daily', '1000mg+ EPA/DHA every day'],
+          ] as [UserInputs['omega3Supp'], string, string][]
+        ).map(([value, label, hint]) => (
           <RadioCard
             key={value}
-            selected={inputs.takeaway === value}
-            onClick={() => onChange('takeaway', value)}
-          >
-            {label}
-          </RadioCard>
+            selected={inputs.omega3Supp === value}
+            onClick={() => onChange('omega3Supp', value)}
+            label={label}
+            hint={hint}
+          />
         ))}
       </div>
 
-      {/* Q6 */}
+      {/* Q6 — Nuts & seeds */}
       <div style={{ marginBottom: '32px' }}>
-        <p
-          style={{
-            fontWeight: 600,
-            fontSize: '16px',
-            color: '#1c1917',
-            marginBottom: '12px',
-          }}
-        >
-          6. How often do you eat processed meats (sausages, bacon, deli meats, nuggets)?
+        <p style={{ fontWeight: 600, fontSize: '16px', color: '#1c1917', marginBottom: '12px' }}>
+          6. How often do you eat nuts and seeds?
+        </p>
+        <p style={{ fontSize: '13px', color: '#a8a29e', marginBottom: '10px' }}>
+          Walnuts, chia seeds, flaxseeds are especially high in omega-3
         </p>
         {(
           [
-            ['daily', 'Daily'],
-            ['few_per_week', 'A few times per week'],
-            ['occasionally', 'Occasionally'],
-            ['rarely_never', 'Rarely or never'],
-          ] as [UserInputs['processedMeat'], string][]
+            ['rarely', 'Rarely or never'],
+            ['moderate', 'A few times a week'],
+            ['high', 'Daily or most days'],
+          ] as [UserInputs['nutsSeeds'], string][]
         ).map(([value, label]) => (
           <RadioCard
             key={value}
-            selected={inputs.processedMeat === value}
-            onClick={() => onChange('processedMeat', value)}
-          >
-            {label}
-          </RadioCard>
+            selected={inputs.nutsSeeds === value}
+            onClick={() => onChange('nutsSeeds', value)}
+            label={label}
+          />
         ))}
       </div>
 
@@ -176,7 +165,7 @@ export default function Step2({ inputs, onChange, onNext, onBack }: Step2Props) 
         </button>
         <button
           type="button"
-          onClick={onNext}
+          onClick={onSubmit}
           disabled={!allAnswered}
           style={{
             flex: 1,
@@ -185,13 +174,14 @@ export default function Step2({ inputs, onChange, onNext, onBack }: Step2Props) 
             border: 'none',
             backgroundColor: allAnswered ? '#ea580c' : '#d6d3d1',
             color: '#ffffff',
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: '16px',
             cursor: allAnswered ? 'pointer' : 'not-allowed',
             transition: 'background-color 0.15s',
+            letterSpacing: '0.01em',
           }}
         >
-          Next →
+          Calculate My Inflammation Risk →
         </button>
       </div>
     </div>

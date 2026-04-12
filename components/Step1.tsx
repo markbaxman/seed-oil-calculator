@@ -8,13 +8,17 @@ interface Step1Props {
   onNext: () => void
 }
 
-interface RadioCardProps {
+function RadioCard({
+  selected,
+  onClick,
+  label,
+  hint,
+}: {
   selected: boolean
   onClick: () => void
-  children: React.ReactNode
-}
-
-function RadioCard({ selected, onClick, children }: RadioCardProps) {
+  label: string
+  hint?: string
+}) {
   return (
     <button
       type="button"
@@ -23,11 +27,10 @@ function RadioCard({ selected, onClick, children }: RadioCardProps) {
         display: 'block',
         width: '100%',
         textAlign: 'left',
-        padding: '12px 16px',
+        padding: '13px 16px',
         borderRadius: '8px',
         border: `2px solid ${selected ? '#ea580c' : '#e7e5e4'}`,
         backgroundColor: selected ? '#fff7ed' : '#ffffff',
-        fontWeight: selected ? 500 : 400,
         color: '#1c1917',
         cursor: 'pointer',
         fontSize: '15px',
@@ -36,16 +39,21 @@ function RadioCard({ selected, onClick, children }: RadioCardProps) {
         marginBottom: '8px',
       }}
     >
-      {children}
+      <span style={{ fontWeight: selected ? 600 : 400 }}>{label}</span>
+      {hint && (
+        <span style={{ display: 'block', fontSize: '12px', color: '#78716c', marginTop: '2px', fontWeight: 400 }}>
+          {hint}
+        </span>
+      )}
     </button>
   )
 }
 
 export default function Step1({ inputs, onChange, onNext }: Step1Props) {
   const allAnswered =
-    inputs.cookingOil !== undefined &&
-    inputs.cookingFreq !== undefined &&
-    inputs.sauces !== undefined
+    inputs.takeawayFreq !== undefined &&
+    inputs.processedFood !== undefined &&
+    inputs.cookingFat !== undefined
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
@@ -58,100 +66,77 @@ export default function Step1({ inputs, onChange, onNext }: Step1Props) {
           marginTop: '8px',
         }}
       >
-        Cooking Oils &amp; Fats
+        Your Daily Habits
       </h2>
       <p style={{ color: '#78716c', fontSize: '14px', marginBottom: '28px' }}>
-        Your cooking oil is often the single biggest driver of omega-6 intake.
+        3 quick questions about what you eat most days.
       </p>
 
-      {/* Q1 */}
+      {/* Q1 — Takeaway */}
       <div style={{ marginBottom: '28px' }}>
-        <p
-          style={{
-            fontWeight: 600,
-            fontSize: '16px',
-            color: '#1c1917',
-            marginBottom: '12px',
-          }}
-        >
-          1. What oil do you mainly cook with?
+        <p style={{ fontWeight: 600, fontSize: '16px', color: '#1c1917', marginBottom: '12px' }}>
+          1. How often do you eat takeaway or fast food?
         </p>
         {(
           [
-            ['vegetable_sunflower_corn', 'Vegetable / sunflower / corn oil'],
-            ['rapeseed_canola', 'Rapeseed / canola oil'],
-            ['olive_coconut', 'Olive oil or coconut oil'],
-            ['butter_ghee_animal', 'Butter, ghee or animal fats'],
-            ['avocado_oil', 'Avocado oil'],
-          ] as [UserInputs['cookingOil'], string][]
+            ['never', 'Never or very rarely'],
+            ['1_to_2_week', '1–2 times a week'],
+            ['3_to_5_week', '3–5 times a week'],
+            ['daily', 'Daily or almost daily'],
+          ] as [UserInputs['takeawayFreq'], string][]
         ).map(([value, label]) => (
           <RadioCard
             key={value}
-            selected={inputs.cookingOil === value}
-            onClick={() => onChange('cookingOil', value)}
-          >
-            {label}
-          </RadioCard>
+            selected={inputs.takeawayFreq === value}
+            onClick={() => onChange('takeawayFreq', value)}
+            label={label}
+          />
         ))}
       </div>
 
-      {/* Q2 */}
+      {/* Q2 — Processed food */}
       <div style={{ marginBottom: '28px' }}>
-        <p
-          style={{
-            fontWeight: 600,
-            fontSize: '16px',
-            color: '#1c1917',
-            marginBottom: '12px',
-          }}
-        >
-          2. How often do you cook at home?
+        <p style={{ fontWeight: 600, fontSize: '16px', color: '#1c1917', marginBottom: '12px' }}>
+          2. How much packaged or processed food do you eat?
         </p>
         {(
           [
-            ['most_meals', 'Most meals (5–7 days a week)'],
-            ['sometimes', 'Sometimes (3–4 days a week)'],
-            ['rarely', 'Rarely (1–2 days a week)'],
-            ['hardly_ever', 'Hardly ever — mostly takeaways'],
-          ] as [UserInputs['cookingFreq'], string][]
-        ).map(([value, label]) => (
+            ['mostly_fresh', 'Mostly fresh', 'Whole foods, home-cooked meals, minimal packaging'],
+            ['some', 'Some packaged food', 'A mix of fresh and packaged — occasional crisps, ready meals'],
+            ['mostly_packaged', 'Mostly packaged', 'Regular snacks, ready meals, processed foods'],
+            ['almost_all', 'Almost all processed', 'Mostly packaged, takeaway, or ready-made food'],
+          ] as [UserInputs['processedFood'], string, string][]
+        ).map(([value, label, hint]) => (
           <RadioCard
             key={value}
-            selected={inputs.cookingFreq === value}
-            onClick={() => onChange('cookingFreq', value)}
-          >
-            {label}
-          </RadioCard>
+            selected={inputs.processedFood === value}
+            onClick={() => onChange('processedFood', value)}
+            label={label}
+            hint={hint}
+          />
         ))}
       </div>
 
-      {/* Q3 */}
+      {/* Q3 — Cooking fat */}
       <div style={{ marginBottom: '32px' }}>
-        <p
-          style={{
-            fontWeight: 600,
-            fontSize: '16px',
-            color: '#1c1917',
-            marginBottom: '12px',
-          }}
-        >
-          3. Which best describes your use of sauces, dressings and condiments?
+        <p style={{ fontWeight: 600, fontSize: '16px', color: '#1c1917', marginBottom: '12px' }}>
+          3. What do you mainly cook with?
         </p>
         {(
           [
-            ['bottled_regularly', 'I use bottled dressings / mayo / ketchup regularly'],
-            ['some_shop_bought', 'I use some shop-bought sauces occasionally'],
-            ['mostly_homemade', 'I mostly use olive oil, vinegar or homemade dressings'],
-            ['rarely', 'I rarely use dressings or sauces'],
-          ] as [UserInputs['sauces'], string][]
-        ).map(([value, label]) => (
+            ['butter', 'Butter or ghee', 'Animal fats — low in omega-6'],
+            ['olive_oil', 'Olive oil or avocado oil', 'Low omega-6, heart-healthy fats'],
+            ['mixed', 'A mix of oils', 'Sometimes olive oil, sometimes others'],
+            ['seed_oils', 'Vegetable or seed oils', 'Sunflower, corn, rapeseed, or "vegetable" oil'],
+          ] as [UserInputs['cookingFat'], string, string][]
+        ).map(([value, label, hint]) => (
           <RadioCard
             key={value}
-            selected={inputs.sauces === value}
-            onClick={() => onChange('sauces', value)}
-          >
-            {label}
-          </RadioCard>
+            selected={inputs.cookingFat === value}
+            onClick={() => onChange('cookingFat', value)}
+            label={label}
+            hint={hint}
+          />
         ))}
       </div>
 
@@ -166,13 +151,14 @@ export default function Step1({ inputs, onChange, onNext }: Step1Props) {
           border: 'none',
           backgroundColor: allAnswered ? '#ea580c' : '#d6d3d1',
           color: '#ffffff',
-          fontWeight: 600,
+          fontWeight: 700,
           fontSize: '16px',
           cursor: allAnswered ? 'pointer' : 'not-allowed',
           transition: 'background-color 0.15s',
+          letterSpacing: '0.01em',
         }}
       >
-        Next →
+        Next: Protective Factors →
       </button>
     </div>
   )

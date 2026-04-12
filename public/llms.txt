@@ -1,0 +1,26 @@
+# Seed Oil Calculator
+> Free tool estimating personal omega-6:omega-3 ratio and dietary inflammation risk from lifestyle inputs.
+
+## About
+seedoilcalculator.com calculates a personalised omega-6 to omega-3 ratio and Inflammation Risk Score based on cooking oil choices, processed food habits, and omega-3 intake. Results include a risk tier (Optimal / Moderate / High / Very High) and personalised reduction actions.
+
+## Scientific Basis
+- Simopoulos AP (2002) The importance of the ratio of omega-6/omega-3 essential fatty acids. Biomed Pharmacother
+- WHO/FAO (2008) Dietary fats and fatty acids in human nutrition
+- USDA FoodData Central — omega-6 content per food
+
+## Key Facts
+- Western diets average 15–25:1 omega-6:omega-3 ratio
+- Healthy target is 4:1 or below (Simopoulos 2002)
+- Vegetable/sunflower oil: ~11g omega-6 per tablespoon
+- Olive oil: ~0.8g omega-6 per tablespoon
+- Swapping cooking oil is the single highest-impact change
+
+## Pages
+- /: Free calculator (10 questions, 2 minutes)
+- /blog: Research and practical guides
+- /reduce: How to reduce seed oil intake
+- /about: Methodology and data sources
+
+## Blog Topics
+Seed oils · Omega-6:omega-3 ratio · Cooking oils ranked · Best omega-3 supplements · Inflammation and diet · Rapeseed oil · Sunflower oil · Heart health · 2026 research updates

@@ -1,0 +1,16 @@
+{
+  "name": "Seed Oil Calculator",
+  "short_name": "Seed Oils",
+  "description": "Free tool to calculate your omega-6:omega-3 ratio and inflammation risk",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafaf9",
+  "theme_color": "#ea580c",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}

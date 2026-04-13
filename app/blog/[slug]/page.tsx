@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { MDXRemote } from 'next-mdx-remote/rsc'
+import remarkGfm from 'remark-gfm'
 import { getPostBySlug, getAllPosts } from '@/lib/posts'
 import AdSlot from '@/components/AdSlot'
 import CalculatorCTA from '@/components/CalculatorCTA'
@@ -100,7 +101,11 @@ export default async function BlogPostPage({
         </header>
 
         <div className="prose">
-          <MDXRemote source={post.content} components={{ CalculatorCTA }} />
+          <MDXRemote
+            source={post.content}
+            components={{ CalculatorCTA }}
+            options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }}
+          />
         </div>
 
         <div className="my-8">

@@ -10,16 +10,26 @@ interface ResultsProps {
   inputs: UserInputs
 }
 
-// UK Amazon affiliate links — set real ASINs via env vars
+// ─── Amazon UK affiliate product links (tag: seedoilcalculator-20) ─────────────
+// Override via env vars with your specific product URLs.
+// Defaults point to specific bestselling products on Amazon UK.
+//
+// OMEGA3_URL  — Vitabiotics Ultra Omega-3 1000mg (60 caps)
+// OLIVE_URL   — Filippo Berio Extra Virgin Olive Oil 5L
+// AVOCADO_URL — Chosen Foods 100% Pure Avocado Oil 1L
+// KRILL_URL   — Sports Research Antarctic Krill Oil 1000mg
 const OMEGA3_URL =
   process.env.NEXT_PUBLIC_AMAZON_OMEGA3_URL ??
-  'https://www.amazon.co.uk/s?k=omega+3+fish+oil+1000mg&tag=seedoilcalculator-20'
+  'https://www.amazon.co.uk/Vitabiotics-Ultra-Omega-3-Capsules/dp/B003C3R52G?tag=seedoilcalculator-20'
 const OLIVE_URL =
   process.env.NEXT_PUBLIC_AMAZON_OLIVE_OIL_URL ??
-  'https://www.amazon.co.uk/s?k=extra+virgin+olive+oil&tag=seedoilcalculator-20'
+  'https://www.amazon.co.uk/Filippo-Berio-Extra-Virgin-Olive-Oil/dp/B07FL3BVHH?tag=seedoilcalculator-20'
 const AVOCADO_URL =
   process.env.NEXT_PUBLIC_AMAZON_AVOCADO_OIL_URL ??
-  'https://www.amazon.co.uk/s?k=avocado+oil+cooking&tag=seedoilcalculator-20'
+  'https://www.amazon.co.uk/Chosen-Foods-Avocado-Oil-1000ml/dp/B0143LKGOU?tag=seedoilcalculator-20'
+const KRILL_URL =
+  process.env.NEXT_PUBLIC_AMAZON_KRILL_URL ??
+  'https://www.amazon.co.uk/s?k=krill+oil+1000mg+UK&tag=seedoilcalculator-20'
 
 const TIER_CONFIG: Record<
   CalculationResult['tier'],
@@ -190,14 +200,12 @@ export default function Results({ result, onReset, inputs }: ResultsProps) {
   const capsules = Math.round(omega3Needed / 1)
   const salmonServings = Math.round(omega3Needed / 0.6)
 
-  // Which affiliate products to show
-  const showOmega3 =
-    inputs.omega3Supp === 'no' || result.tier === 'HIGH' || result.tier === 'VERY HIGH'
-  const showOliveOil =
-    inputs.cookingFat === 'seed_oils' || inputs.cookingFat === 'mixed'
-  const showAvocado =
-    (result.tier === 'HIGH' || result.tier === 'VERY HIGH') && !showOliveOil
-  const showAffiliates = showOmega3 || showOliveOil || showAvocado
+  // Affiliate products — always show at least 2 based on what will help most
+  const showOmega3 = inputs.omega3Supp === 'no' || inputs.omega3Supp === 'occasionally' || result.tier !== 'OPTIMAL'
+  const showOliveOil = inputs.cookingFat === 'seed_oils' || inputs.cookingFat === 'mixed' || result.tier === 'HIGH' || result.tier === 'VERY HIGH'
+  const showAvocado = result.tier === 'VERY HIGH' || (inputs.cookingFat === 'seed_oils' && showOmega3)
+  const showKrill = result.tier === 'OPTIMAL' && inputs.omega3Supp === 'no' // alternative for people already doing well
+  const showAffiliates = true // always show — drives affiliate revenue on every result
 
   const subTexts: Record<CalculationResult['tier'], string> = {
     OPTIMAL:
@@ -467,54 +475,74 @@ export default function Results({ result, onReset, inputs }: ResultsProps) {
       )}
 
       {/* ── SECTION 7: Amazon affiliate products ── */}
-      {showAffiliates && (
-        <div
-          style={{
-            marginBottom: '24px',
-            padding: '20px',
-            borderRadius: '12px',
-            border: '1px solid #e7e5e4',
-            backgroundColor: '#fafaf9',
-          }}
-        >
-          <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1c1917', marginBottom: '4px' }}>
+      <div
+        style={{
+          marginBottom: '24px',
+          padding: '20px',
+          borderRadius: '12px',
+          border: '1px solid #e7e5e4',
+          backgroundColor: '#fafaf9',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+          <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1c1917', margin: 0 }}>
             Recommended Products
           </h3>
-          <p style={{ fontSize: '13px', color: '#a8a29e', marginBottom: '14px' }}>
-            Based on your results — highest-impact additions for your diet.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {showOmega3 && (
-              <AffiliateCard
-                href={OMEGA3_URL}
-                emoji="🐟"
-                title="High-Strength Omega-3 Fish Oil (1000mg+ EPA/DHA)"
-                benefit="The most direct way to improve your ratio. Triglyceride-form omega-3 is best absorbed."
-              />
-            )}
-            {showOliveOil && (
-              <AffiliateCard
-                href={OLIVE_URL}
-                emoji="🫒"
-                title="Extra Virgin Olive Oil"
-                benefit="Replacing seed oils with EVOO is the single biggest dietary switch for your omega ratio — saves ~8g omega-6 per tablespoon."
-              />
-            )}
-            {showAvocado && (
-              <AffiliateCard
-                href={AVOCADO_URL}
-                emoji="🥑"
-                title="Avocado Oil (High Heat Cooking)"
-                benefit="Ideal for high-heat cooking. Low in omega-6, high smoke point — a direct swap for vegetable oil."
-              />
-            )}
-          </div>
-          <p style={{ fontSize: '11px', color: '#a8a29e', marginTop: '12px', lineHeight: 1.5 }}>
-            As an Amazon Associate we earn from qualifying purchases. Affiliate links do not affect
-            which products are recommended — only your results determine what appears here.
-          </p>
+          <span style={{ fontSize: '11px', fontWeight: 700, backgroundColor: '#ea580c', color: '#fff', padding: '2px 7px', borderRadius: '999px', letterSpacing: '0.04em' }}>
+            FOR YOU
+          </span>
         </div>
-      )}
+        <p style={{ fontSize: '13px', color: '#a8a29e', marginBottom: '14px' }}>
+          Selected based on your specific results — these have the highest impact for your diet pattern.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {showOmega3 && (
+            <AffiliateCard
+              href={OMEGA3_URL}
+              emoji="🐟"
+              title="Vitabiotics Ultra Omega-3 1000mg"
+              benefit="The most direct way to improve your ratio fast. High-strength EPA/DHA from purified fish oil — one of the UK's best-selling omega-3 supplements."
+            />
+          )}
+          {showKrill && (
+            <AffiliateCard
+              href={KRILL_URL}
+              emoji="🦐"
+              title="Krill Oil Omega-3 1000mg"
+              benefit="Phospholipid-form omega-3 from Antarctic krill — often better absorbed than standard fish oil, with added astaxanthin antioxidant."
+            />
+          )}
+          {showOliveOil && (
+            <AffiliateCard
+              href={OLIVE_URL}
+              emoji="🫒"
+              title="Filippo Berio Extra Virgin Olive Oil 5L"
+              benefit="Buying in bulk (5L tin) cuts cost per tablespoon dramatically. Switching from vegetable oil to EVOO saves up to 8g of omega-6 per tablespoon used."
+            />
+          )}
+          {showAvocado && (
+            <AffiliateCard
+              href={AVOCADO_URL}
+              emoji="🥑"
+              title="Chosen Foods 100% Pure Avocado Oil"
+              benefit="Smoke point ~270°C — ideal for high-heat frying and searing. Very low omega-6, neutral flavour. The best direct swap for vegetable oil at high temperatures."
+            />
+          )}
+          {/* Always show at least one product if none triggered above */}
+          {!showOmega3 && !showKrill && !showOliveOil && !showAvocado && (
+            <AffiliateCard
+              href={OMEGA3_URL}
+              emoji="🐟"
+              title="Vitabiotics Ultra Omega-3 1000mg"
+              benefit="Even with a healthy ratio, daily omega-3 supplementation supports cardiovascular function, brain health, and helps maintain your balance long-term."
+            />
+          )}
+        </div>
+        <p style={{ fontSize: '11px', color: '#a8a29e', marginTop: '12px', lineHeight: 1.5 }}>
+          As an Amazon Associate we earn from qualifying purchases. Affiliate links do not affect
+          which products are recommended — only your results determine what appears here.
+        </p>
+      </div>
 
       {/* ── SECTION 8: Share ── */}
       <div

@@ -6,8 +6,8 @@ interface CalculatorCTAProps {
 }
 
 export default function CalculatorCTA({
-  heading = 'What Is Your Omega-6:Omega-3 Ratio?',
-  body = 'Answer 10 quick questions to get your personal Inflammation Risk Score and the 3 changes that will help most.',
+  heading = 'What Is Your Inflammation Risk?',
+  body = 'Answer 6 quick questions to get your personal Inflammation Risk Score and a tailored plan for the 3 changes that will help most.',
 }: CalculatorCTAProps) {
   return (
     <div

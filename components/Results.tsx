@@ -20,16 +20,16 @@ interface ResultsProps {
 // KRILL_URL   — Sports Research Antarctic Krill Oil 1000mg
 const OMEGA3_URL =
   process.env.NEXT_PUBLIC_AMAZON_OMEGA3_URL ??
-  'https://www.amazon.co.uk/Vitabiotics-Ultra-Omega-3-Capsules/dp/B003C3R52G?tag=seedoilcalculator-20'
+  'https://www.amazon.co.uk/s?k=vitabiotics+ultra+omega+3+fish+oil&tag=seedoilcalculator-20'
 const OLIVE_URL =
   process.env.NEXT_PUBLIC_AMAZON_OLIVE_OIL_URL ??
-  'https://www.amazon.co.uk/Filippo-Berio-Extra-Virgin-Olive-Oil/dp/B07FL3BVHH?tag=seedoilcalculator-20'
+  'https://www.amazon.co.uk/s?k=filippo+berio+extra+virgin+olive+oil+5l&tag=seedoilcalculator-20'
 const AVOCADO_URL =
   process.env.NEXT_PUBLIC_AMAZON_AVOCADO_OIL_URL ??
-  'https://www.amazon.co.uk/Chosen-Foods-Avocado-Oil-1000ml/dp/B0143LKGOU?tag=seedoilcalculator-20'
+  'https://www.amazon.co.uk/s?k=pure+avocado+oil+cooking+1l&tag=seedoilcalculator-20'
 const KRILL_URL =
   process.env.NEXT_PUBLIC_AMAZON_KRILL_URL ??
-  'https://www.amazon.co.uk/s?k=krill+oil+1000mg+UK&tag=seedoilcalculator-20'
+  'https://www.amazon.co.uk/s?k=krill+oil+1000mg&tag=seedoilcalculator-20'
 
 const TIER_CONFIG: Record<
   CalculationResult['tier'],
